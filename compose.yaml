@@ -1,0 +1,6 @@
+﻿services:
+  staffportal:
+    image: staffportal
+    build:
+      context: .
+      dockerfile: StaffPortal/Dockerfile

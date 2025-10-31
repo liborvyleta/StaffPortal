@@ -1,0 +1,42 @@
+# .gitignore pro projekt StaffPortal
+# Ignorovat lokální soubory appsettings (ve všech podsložkách)
+**/appsettings.json
+**/appsettings.*.json
+appsettings.json
+appsettings.*.json
+
+# Build output
+**/bin/
+**/obj/
+
+# Rider / IDE / Visual Studio / VSCode
+.idea/
+.vscode/
+*.sln.iml
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+packages/
+*.nupkg
+.nuget/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Lokální tajné/konfigurační soubory
+secrets.json
+usersecrets.json
+.env
+
+# Docker
+docker-compose.override.yml
+
+# Další dočasné soubory
+*.tmp
+*.cache
+
