@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using StaffPortal.Data;
@@ -17,15 +18,16 @@ public class EmployeesController : ControllerBase
     }
 
     //  GET all employees
+    //[Authorize(Roles = "Admin,User")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var result = await _context.Employees.Aggregate()
             .Lookup<Employee, Department, EmployeeWithDepartment>(
-                _context.Departments, 
+                _context.Departments,
                 e => e.DepartmentId,
-                d => d.Id, 
-                ewd => ewd.Departments 
+                d => d.Id,
+                ewd => ewd.Departments
             )
             .ToListAsync();
 
@@ -43,16 +45,17 @@ public class EmployeesController : ControllerBase
     }
 
     //  GET one employee by ID
+    //[Authorize(Roles = "Admin,User")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
         var result = await _context.Employees.Aggregate()
             .Match(e => e.Id == id)
             .Lookup<Employee, Department, EmployeeWithDepartment>(
-                _context.Departments, 
-                e => e.DepartmentId, 
-                d => d.Id, 
-                ewd => ewd.Departments 
+                _context.Departments,
+                e => e.DepartmentId,
+                d => d.Id,
+                ewd => ewd.Departments
             )
             .FirstOrDefaultAsync();
 
