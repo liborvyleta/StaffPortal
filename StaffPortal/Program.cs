@@ -28,24 +28,24 @@ var jwtKey = builder.Configuration["Jwt:Key"]!;
 var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateIssuerSigningKey = true,
-        ValidateLifetime = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
-        ClockSkew = TimeSpan.Zero
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
 
 // Swagger s JWT
 builder.Services.AddSwaggerGen(c =>
@@ -107,13 +107,12 @@ using (var scope = app.Services.CreateScope())
     {
         var admin = new User
         {
-            Username = "admin@firma.cz",
             Email = "admin@firma.cz",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
             Role = "Admin"
         };
         await ctx.Users.InsertOneAsync(admin);
-        Console.WriteLine("✅ Seeded default admin: admin / admin123");
+        Console.WriteLine(" Seeded default admin: admin / admin123");
     }
 }
 
