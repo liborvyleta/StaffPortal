@@ -27,8 +27,14 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             return BadRequest(new { message = "Username and password are required." });
 
+        // support both email and username fields in DB
+        var filter = Builders<User>.Filter.Or(
+            Builders<User>.Filter.Eq(u => u.Email, request.Email),
+            Builders<User>.Filter.Eq(u => u.Username, request.Email)
+        );
+
         var user = await _context.Users
-            .Find(u => u.Email == request.Email)
+            .Find(filter)
             .FirstOrDefaultAsync();
 
         if (user == null)

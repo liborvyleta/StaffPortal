@@ -107,6 +107,7 @@ using (var scope = app.Services.CreateScope())
     {
         var admin = new User
         {
+            Username = "admin",
             Email = "admin@firma.cz",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
             Role = "Admin"

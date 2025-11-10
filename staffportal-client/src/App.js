@@ -5,6 +5,7 @@ import RegisterCompany from "./pages/RegisterCompany";
 import Dashboard from "./pages/Dashboard";
 import Contact from "./pages/Contact";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import Login from "./pages/Login";
 
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard/>}/>
                 <Route path="/contact" element={<Contact/>}/>
                 <Route path="/superadmin" element={<SuperAdminDashboard/>}/>
+                <Route path="/login" element={<Login/>}/>
             </Routes>
         </Router>
     );

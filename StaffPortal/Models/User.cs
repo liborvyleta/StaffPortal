@@ -3,11 +3,16 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace StaffPortal.Models;
 
+[BsonIgnoreExtraElements]
 public class User
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = string.Empty;
+
+    // add Username to support older documents that used "username"
+    [BsonElement("username")]
+    public string? Username { get; set; } = string.Empty;
 
     [BsonElement("email")] public string Email { get; set; } = string.Empty;
 

@@ -10,7 +10,6 @@ export default function HomeLanding() {
                 padding: 0,
             }}
         >
-            {/* NAVBAR */}
             <nav
                 style={{
                     display: "flex",
@@ -25,23 +24,45 @@ export default function HomeLanding() {
                 }}
             >
                 <h2 style={{ color: "#1f4e79", margin: 0 }}>StaffPortal</h2>
-                <button
-                    style={{
-                        background: "#1f4e79",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "8px",
-                        padding: "10px 20px",
-                        cursor: "pointer",
-                        fontWeight: 500,
-                        transition: "all 0.3s ease",
-                    }}
-                    onMouseEnter={(e) => (e.target.style.background = "#3a7bd5")}
-                    onMouseLeave={(e) => (e.target.style.background = "#1f4e79")}
-                    onClick={() => (window.location.href = "/dashboard")}
-                >
-                    Enter Portal
-                </button>
+
+                {/* Wrapper pro tlačítka */}
+                <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                        style={{
+                            background: "#1f4e79",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "10px 20px",
+                            cursor: "pointer",
+                            fontWeight: 500,
+                            transition: "all 0.3s ease",
+                        }}
+                        onMouseEnter={(e) => (e.target.style.background = "#3a7bd5")}
+                        onMouseLeave={(e) => (e.target.style.background = "#1f4e79")}
+                        onClick={() => (window.location.href = "/dashboard")}
+                    >
+                        Enter Portal
+                    </button>
+
+                    <button
+                        style={{
+                            background: "#1f4e79",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "10px 20px",
+                            cursor: "pointer",
+                            fontWeight: 500,
+                            transition: "all 0.3s ease",
+                        }}
+                        onMouseEnter={(e) => (e.target.style.background = "#3a7bd5")}
+                        onMouseLeave={(e) => (e.target.style.background = "#1f4e79")}
+                        onClick={() => (window.location.href = "/login")}
+                    >
+                        Login
+                    </button>
+                </div>
             </nav>
 
             {/* HERO SECTION */}
@@ -53,7 +74,7 @@ export default function HomeLanding() {
                     color: "white",
                 }}
             >
-                <h1 style={{ fontSize: "3.5rem", marginBottom: "20px", fontWeight: 700 }}>
+                <h1 style={{fontSize: "3.5rem", marginBottom: "20px", fontWeight: 700}}>
                     Empower Your Workplace
                 </h1>
                 <p
@@ -97,8 +118,8 @@ export default function HomeLanding() {
                     textAlign: "center",
                 }}
             >
-                <h2 style={{ color: "#1f4e79", marginBottom: "10px" }}>What You Can Do</h2>
-                <p style={{ color: "#555", marginBottom: "50px" }}>
+                <h2 style={{color: "#1f4e79", marginBottom: "10px"}}>What You Can Do</h2>
+                <p style={{color: "#555", marginBottom: "50px"}}>
                     Manage employees, track attendance, and stay connected with your company.
                 </p>
 
@@ -149,9 +170,9 @@ export default function HomeLanding() {
                                 e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.05)";
                             }}
                         >
-                            <div style={{ fontSize: "2.5rem" }}>{f.icon}</div>
-                            <h3 style={{ color: "#1f4e79", marginTop: "10px" }}>{f.title}</h3>
-                            <p style={{ color: "#666" }}>{f.text}</p>
+                            <div style={{fontSize: "2.5rem"}}>{f.icon}</div>
+                            <h3 style={{color: "#1f4e79", marginTop: "10px"}}>{f.title}</h3>
+                            <p style={{color: "#666"}}>{f.text}</p>
                         </div>
                     ))}
                 </div>
@@ -165,7 +186,7 @@ export default function HomeLanding() {
                     textAlign: "center",
                 }}
             >
-                <h2 style={{ color: "#1f4e79", marginBottom: "20px" }}>Built for Modern Teams</h2>
+                <h2 style={{color: "#1f4e79", marginBottom: "20px"}}>Built for Modern Teams</h2>
                 <p
                     style={{
                         color: "#444",
@@ -189,7 +210,7 @@ export default function HomeLanding() {
                     padding: "40px",
                 }}
             >
-                <p style={{ margin: 0 }}>
+                <p style={{margin: 0}}>
                     © {new Date().getFullYear()} StaffPortal — Empowering your workplace.
                 </p>
             </footer>
