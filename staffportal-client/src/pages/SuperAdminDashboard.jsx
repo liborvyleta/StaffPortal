@@ -108,7 +108,7 @@ export default function SuperAdminDashboard() {
                                             background: "#28a745",
                                         }}
                                     >
-                                        ✅ Approve
+                                        Approve
                                     </button>
                                     <button
                                         onClick={() => handleReject(r.id)}
@@ -118,7 +118,7 @@ export default function SuperAdminDashboard() {
                                             marginLeft: "10px",
                                         }}
                                     >
-                                        ❌ Reject
+                                         Reject
                                     </button>
                                 </td>
                             </tr>

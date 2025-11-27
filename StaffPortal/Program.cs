@@ -103,17 +103,18 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<MongoContext>();
     var anyUser = await ctx.Users.Find(_ => true).AnyAsync();
 
+    // Pokud v databázi není ŽÁDNÝ uživatel, vytvoříme SuperAdmina
     if (!anyUser)
     {
         var admin = new User
         {
-            Username = "admin",
             Email = "admin@firma.cz",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-            Role = "Admin"
+            Role = "SuperAdmin",
+            CompanyId = null
         };
         await ctx.Users.InsertOneAsync(admin);
-        Console.WriteLine(" Seeded default admin: admin / admin123");
+        Console.WriteLine("--- SEED: Vytvořen defaultní SuperAdmin: admin@firma.cz / admin123 ---");
     }
 }
 

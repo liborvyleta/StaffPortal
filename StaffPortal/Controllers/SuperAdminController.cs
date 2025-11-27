@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using StaffPortal.Data;
 using StaffPortal.Models;
+using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 namespace StaffPortal.Controllers;
 
@@ -20,8 +22,9 @@ public class SuperAdminController : ControllerBase
     [HttpGet("requests")]
     public async Task<IActionResult> GetPendingRequests()
     {
+        // ZMĚNA: Filtrujeme pouze žádosti se statusem "Pending"
         var requests = await _context.ContactRequests
-            .Find(r => true)
+            .Find(r => r.Status == "Pending") 
             .SortByDescending(r => r.SubmittedAt)
             .ToListAsync();
 
@@ -36,32 +39,42 @@ public class SuperAdminController : ControllerBase
         if (request == null)
             return NotFound(new { message = "Request not found" });
 
-        // Create Company
+        // Generování slugu
+        string slug = GenerateSlug(request.CompanyName);
+
+        // Zkusíme získat ID přihlášeného admina
+        var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // Vytvoření firmy
         var company = new Company
         {
             Name = request.CompanyName,
-            CreatedAt = DateTime.UtcNow
+            Slug = slug, 
+            Email = request.Email,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = adminId 
         };
         await _context.Companies.InsertOneAsync(company);
 
-        //  Create Admin User for this company
+        // Vytvoření CompanyAdmina
         var adminUser = new User
         {
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-            Role = "Admin",
+            Role = "CompanyAdmin", 
             CompanyId = company.Id
         };
         await _context.Users.InsertOneAsync(adminUser);
 
-        // Mark request as processed
+        // Označení žádosti jako schválené
         var update = Builders<ContactRequest>.Update.Set("Status", "Approved");
         await _context.ContactRequests.UpdateOneAsync(r => r.Id == id, update);
 
         return Ok(new
         {
-            message = $"Company '{company.Name}' approved successfully.",
+            message = $"Company '{company.Name}' approved successfully. Portal: /portal/{company.Slug}",
             companyId = company.Id,
+            companySlug = company.Slug,
             adminUsername = adminUser.Email,
             tempPassword = "admin123"
         });
@@ -76,5 +89,14 @@ public class SuperAdminController : ControllerBase
             return NotFound();
 
         return Ok(new { message = "Request rejected and deleted." });
+    }
+
+    private string GenerateSlug(string phrase)
+    {
+        string str = phrase.ToLower();
+        str = Regex.Replace(str, @"[^a-z0-9\s-]", "");
+        str = Regex.Replace(str, @"\s+", " ").Trim();
+        str = Regex.Replace(str, @"\s", "-");
+        return str;
     }
 }

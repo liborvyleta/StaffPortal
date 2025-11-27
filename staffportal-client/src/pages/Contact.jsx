@@ -128,7 +128,7 @@ export default function Contact() {
 
                     {success && (
                         <p style={{ color: "green", textAlign: "center", marginTop: "15px" }}>
-                            ✅ Your request has been sent successfully!
+                             Your request has been sent successfully!
                         </p>
                     )}
                 </form>

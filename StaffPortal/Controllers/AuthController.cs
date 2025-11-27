@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using StaffPortal.Data;
 using StaffPortal.Models;
 using StaffPortal.Services;
-using LoginRequest = StaffPortal.DTOs.LoginRequest;
+using StaffPortal.DTOs; // Ujistěte se, že používáte správný namespace pro DTO
 
 namespace StaffPortal.Controllers;
 
@@ -27,14 +26,8 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             return BadRequest(new { message = "Username and password are required." });
 
-        // support both email and username fields in DB
-        var filter = Builders<User>.Filter.Or(
-            Builders<User>.Filter.Eq(u => u.Email, request.Email),
-            Builders<User>.Filter.Eq(u => u.Username, request.Email)
-        );
-
         var user = await _context.Users
-            .Find(filter)
+            .Find(u => u.Email == request.Email)
             .FirstOrDefaultAsync();
 
         if (user == null)
@@ -46,10 +39,30 @@ public class AuthController : ControllerBase
 
         var token = _tokenService.GenerateToken(user);
 
+        // Získání slugu firmy, pokud uživatel patří k firmě
+        string companySlug = "";
+        if (!string.IsNullOrEmpty(user.CompanyId))
+        {
+            var company = await _context.Companies
+                .Find(c => c.Id == user.CompanyId)
+                .FirstOrDefaultAsync();
+            
+            if (company != null)
+            {
+                companySlug = company.Slug;
+            }
+        }
+
         return Ok(new
         {
             token,
-            user = new { user.Id, user.Email, user.Role }
+            user = new 
+            { 
+                user.Id, 
+                user.Email, 
+                user.Role,
+                CompanySlug = companySlug // Toto pole frontend potřebuje pro přesměrování
+            }
         });
     }
 
@@ -57,7 +70,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-            return BadRequest(new { message = "Username and password are required" });
+            return BadRequest(new { message = "Username and password are required." });
 
         var exists = await _context.Users.Find(u => u.Email == request.Email).FirstOrDefaultAsync();
         if (exists != null)
@@ -67,7 +80,7 @@ public class AuthController : ControllerBase
         {
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = "User"
+            Role = "User" 
         };
 
         await _context.Users.InsertOneAsync(user);
