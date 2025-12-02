@@ -1,13 +1,17 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using StaffPortal.Data;
 using StaffPortal.Models;
+using StaffPortal.DTOs;
+using System.Security.Claims;
 
 namespace StaffPortal.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class EmployeesController : ControllerBase
 {
     private readonly MongoContext _context;
@@ -17,12 +21,16 @@ public class EmployeesController : ControllerBase
         _context = context;
     }
 
-    //  GET all employees
-    //[Authorize(Roles = "Admin,User")]
+    // GET all
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        var companyId = User.FindFirst("companyId")?.Value;
+        if (string.IsNullOrEmpty(companyId)) return BadRequest(new { message = "Chybí identifikace firmy." });
+
+        // Propojíme zaměstnance s odděleními (Lookup), abychom mohli poslat název oddělení na frontend
         var result = await _context.Employees.Aggregate()
+            .Match(e => e.CompanyId == companyId)
             .Lookup<Employee, Department, EmployeeWithDepartment>(
                 _context.Departments,
                 e => e.DepartmentId,
@@ -31,97 +39,146 @@ public class EmployeesController : ControllerBase
             )
             .ToListAsync();
 
+        // Namapujeme výsledek pro frontend
         var response = result.Select(e => new
         {
             e.Id,
-            e.Name,
+            e.FirstName,
+            e.LastName,
             e.Position,
             e.Salary,
+            e.Email,
             e.DepartmentId,
-            DepartmentName = e.Departments.FirstOrDefault()?.Name ?? "(Unknown)"
+            DepartmentName = e.Departments.FirstOrDefault()?.Name ?? "—"
         });
 
         return Ok(response);
     }
 
-    //  GET one employee by ID
-    //[Authorize(Roles = "Admin,User")]
+    // GET by ID
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
-        var result = await _context.Employees.Aggregate()
-            .Match(e => e.Id == id)
+        var employee = await _context.Employees.Find(e => e.Id == id).FirstOrDefaultAsync();
+        if (employee == null) return NotFound(new { message = $"Employee not found" });
+        return Ok(employee);
+    }
+
+    // POST create
+    [HttpPost]
+    public async Task<IActionResult> Add([FromBody] CreateEmployeeDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName) || 
+            string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+            return BadRequest(new { message = "Jméno, příjmení, email a heslo jsou povinné." });
+
+        var companyId = User.FindFirst("companyId")?.Value;
+        if (string.IsNullOrEmpty(companyId)) return BadRequest(new { message = "Chyba: Neznámá firma." });
+
+        var existingUser = await _context.Users.Find(u => u.Email == request.Email).FirstOrDefaultAsync();
+        if (existingUser != null) return Conflict(new { message = "Uživatel s tímto emailem již existuje." });
+
+        var employee = new Employee
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Position = request.Position,
+            Salary = request.Salary,
+            Email = request.Email,
+            CompanyId = companyId,
+            DepartmentId = request.DepartmentId // ZMĚNA: Ukládáme vybrané oddělení
+        };
+        await _context.Employees.InsertOneAsync(employee);
+
+        var user = new User
+        {
+            Email = request.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = "User",
+            CompanyId = companyId,
+            EmployeeId = employee.Id
+        };
+        await _context.Users.InsertOneAsync(user);
+
+        return Ok(new { message = "Zaměstnanec vytvořen.", employeeId = employee.Id });
+    }
+
+    // DELETE
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var result = await _context.Employees.DeleteOneAsync(e => e.Id == id);
+        if (result.DeletedCount == 0) return NotFound();
+        return NoContent();
+    }
+
+    // SEARCH
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return BadRequest();
+
+        var companyId = User.FindFirst("companyId")?.Value;
+        
+        var filter = Builders<Employee>.Filter.And(
+            Builders<Employee>.Filter.Eq(e => e.CompanyId, companyId),
+            Builders<Employee>.Filter.Or(
+                Builders<Employee>.Filter.Regex(e => e.FirstName, new BsonRegularExpression(text, "i")),
+                Builders<Employee>.Filter.Regex(e => e.LastName, new BsonRegularExpression(text, "i")),
+                Builders<Employee>.Filter.Regex(e => e.Position, new BsonRegularExpression(text, "i"))
+            )
+        );
+
+        // I při vyhledávání chceme vidět oddělení, takže použijeme také Aggregate/Lookup
+        var employees = await _context.Employees.Aggregate()
+            .Match(filter)
             .Lookup<Employee, Department, EmployeeWithDepartment>(
                 _context.Departments,
                 e => e.DepartmentId,
                 d => d.Id,
                 ewd => ewd.Departments
             )
-            .FirstOrDefaultAsync();
+            .ToListAsync();
 
-        if (result == null)
-            return NotFound(new { message = $"Employee with id {id} not found" });
-
-        var response = new
+        var response = employees.Select(e => new
         {
-            result.Id,
-            result.Name,
-            result.Position,
-            result.Salary,
-            result.DepartmentId,
-            DepartmentName = result.Departments.FirstOrDefault()?.Name ?? "(Unknown)"
-        };
+            e.Id,
+            e.FirstName,
+            e.LastName,
+            e.Position,
+            e.Salary,
+            e.Email,
+            e.DepartmentId,
+            DepartmentName = e.Departments.FirstOrDefault()?.Name ?? "—"
+        });
 
         return Ok(response);
     }
-
-    //  POST create new employee
-    [HttpPost]
-    public async Task<IActionResult> Add([FromBody] Employee employee)
-    {
-        if (string.IsNullOrWhiteSpace(employee.Name))
-            return BadRequest(new { message = "Employee name is required" });
-
-        await _context.Employees.InsertOneAsync(employee);
-        return CreatedAtAction(nameof(GetById), new { id = employee.Id }, employee);
-    }
-
-    //  PUT update existing employee
+    
+    // PUT update existing employee
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, [FromBody] Employee updatedEmployee)
+    public async Task<IActionResult> Update(string id, [FromBody] UpdateEmployeeDto request)
     {
-        var result = await _context.Employees.ReplaceOneAsync(e => e.Id == id, updatedEmployee);
-        if (result.MatchedCount == 0)
-            return NotFound(new { message = $"Employee with id {id} not found" });
+        var companyId = User.FindFirst("companyId")?.Value;
+        if (string.IsNullOrEmpty(companyId))
+            return BadRequest(new { message = "Chybí identifikace firmy." });
 
-        return Ok(updatedEmployee);
-    }
+        var existingEmployee = await _context.Employees
+            .Find(e => e.Id == id && e.CompanyId == companyId)
+            .FirstOrDefaultAsync();
 
-    // DELETE employee
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id)
-    {
-        var result = await _context.Employees.DeleteOneAsync(e => e.Id == id);
-        if (result.DeletedCount == 0)
-            return NotFound(new { message = $"Employee with id {id} not found" });
+        if (existingEmployee == null)
+            return NotFound(new { message = $"Zaměstnanec nebyl nalezen nebo k němu nemáte práva." });
 
-        return NoContent();
-    }
-
-    // SEARCH employees by text (name or position)
-    [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return BadRequest(new { message = "Search text cannot be empty" });
-
-        // MongoDB text filter (case-insensitive)
-        var filter = Builders<Employee>.Filter.Or(
-            Builders<Employee>.Filter.Regex(e => e.Name, new MongoDB.Bson.BsonRegularExpression(text, "i")),
-            Builders<Employee>.Filter.Regex(e => e.Position, new MongoDB.Bson.BsonRegularExpression(text, "i"))
-        );
-
-        var employees = await _context.Employees.Find(filter).ToListAsync();
-        return Ok(employees);
+        // Aktualizace polí
+        existingEmployee.FirstName = request.FirstName;
+        existingEmployee.LastName = request.LastName;
+        existingEmployee.Position = request.Position;
+        existingEmployee.Salary = request.Salary;
+        existingEmployee.Email = request.Email;
+        existingEmployee.DepartmentId = request.DepartmentId; // ZMĚNA: Aktualizace oddělení
+        
+        await _context.Employees.ReplaceOneAsync(e => e.Id == id, existingEmployee);
+        return Ok(existingEmployee);
     }
 }

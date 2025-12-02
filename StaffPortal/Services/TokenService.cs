@@ -32,7 +32,9 @@ public class TokenService : ITokenService
         {
             new(JwtRegisteredClaimNames.Sub, user.Id),
             new(JwtRegisteredClaimNames.UniqueName, user.Email),
-            new(ClaimTypes.Role, user.Role)
+            new(ClaimTypes.Role, user.Role),
+            
+            new("companyId", user.CompanyId ?? "") 
         };
 
         var token = new JwtSecurityToken(

@@ -70,7 +70,7 @@ export default function SuperAdminDashboard() {
                     <p style={{textAlign: "center"}}>Loading requests...</p>
                 ) : requests.length === 0 ? (
                     <p style={{textAlign: "center", color: "#777"}}>
-                        ✅ No pending requests found.
+                        No pending requests found.
                     </p>
                 ) : (
                     <table

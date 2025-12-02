@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using StaffPortal.Data;
 using StaffPortal.Models;
+using System.Security.Claims;
 
 namespace StaffPortal.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class DepartmentsController : ControllerBase
 {
     private readonly MongoContext _context;
@@ -16,22 +19,18 @@ public class DepartmentsController : ControllerBase
         _context = context;
     }
 
-    // GET all departments
+    // GET all departments for my company
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var departments = await _context.Departments.Find(_ => true).ToListAsync();
-        return Ok(departments);
-    }
+        var companyId = User.FindFirst("companyId")?.Value;
+        if (string.IsNullOrEmpty(companyId)) return BadRequest(new { message = "Chybí identifikace firmy." });
 
-    // GET department by ID
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(string id)
-    {
-        var department = await _context.Departments.Find(d => d.Id == id).FirstOrDefaultAsync();
-        if (department == null)
-            return NotFound(new { message = $"Department with id {id} not found" });
-        return Ok(new { message = $"Department with id {id}" });
+        var departments = await _context.Departments
+            .Find(d => d.CompanyId == companyId)
+            .ToListAsync();
+        
+        return Ok(departments);
     }
 
     // POST create new department
@@ -39,21 +38,15 @@ public class DepartmentsController : ControllerBase
     public async Task<IActionResult> Add([FromBody] Department department)
     {
         if (string.IsNullOrWhiteSpace(department.Name))
-            return BadRequest(new { message = "Department name is required" });
+            return BadRequest(new { message = "Název oddělení je povinný." });
+
+        var companyId = User.FindFirst("companyId")?.Value;
+        if (string.IsNullOrEmpty(companyId)) return BadRequest(new { message = "Neznámá firma." });
+
+        department.CompanyId = companyId; // Přiřadíme firmu
 
         await _context.Departments.InsertOneAsync(department);
-        return CreatedAtAction(nameof(GetById), new { id = department.Id }, department);
-    }
-
-    // PUT update existing department
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, [FromBody] Department updatedDepartment)
-    {
-        var result = await _context.Departments.ReplaceOneAsync(d => d.Id == id, updatedDepartment);
-        if (result.MatchedCount == 0)
-            return NotFound(new { message = $"Department with id {id} not found" });
-
-        return Ok(new { message = $"Department with id {id} updated" });
+        return Ok(department);
     }
 
     // DELETE department
@@ -61,9 +54,7 @@ public class DepartmentsController : ControllerBase
     public async Task<IActionResult> Delete(string id)
     {
         var result = await _context.Departments.DeleteOneAsync(d => d.Id == id);
-        if (result.DeletedCount == 0)
-            return NotFound(new { message = $"Department with id {id} not found" });
-
-        return Ok(new { message = $"Department with id {id} deleted successfully" });
+        if (result.DeletedCount == 0) return NotFound();
+        return Ok(new { message = "Oddělení smazáno" });
     }
 }

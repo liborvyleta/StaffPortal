@@ -9,12 +9,13 @@ public class Department
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = string.Empty;
 
-    [BsonElement("name")]
-    public string Name { get; set; } = string.Empty;
+    [BsonElement("name")] public string Name { get; set; } = string.Empty;
 
-    [BsonElement("officeNumber")]
-    public int OfficeNumber { get; set; }
+    [BsonElement("officeNumber")] public int OfficeNumber { get; set; }
 
-    [BsonElement("description")]
-    public string Description { get; set; } = string.Empty;
+    [BsonElement("description")] public string Description { get; set; } = string.Empty;
+
+    [BsonElement("companyId")]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? CompanyId { get; set; }
 }
