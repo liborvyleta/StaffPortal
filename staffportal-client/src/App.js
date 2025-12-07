@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import CompanyPortal from "./pages/CompanyPortal";
 import Departments from "./pages/Departments";
+import MyProfile from "./pages/MyProfile"; // Import nového profilu
 
 function App() {
     return (
@@ -17,27 +18,28 @@ function App() {
             <Router>
                 <Toaster position="top-right" />
                 <Routes>
-                    {/* Public Routes */}
+                    {/* Veřejné stránky */}
                     <Route path="/" element={<HomeLanding />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/login" element={<Login />} />
 
-                    {/* SuperAdmin Routes */}
+                    {/* SuperAdmin zóna */}
                     <Route element={<ProtectedRoute allowedRoles={["SuperAdmin"]} />}>
                         <Route path="/superadmin" element={<SuperAdminDashboard />} />
                     </Route>
 
-                    {/* Company Routes (Admin + User) */}
+                    {/* Firemní zóna (Admin + User) */}
                     <Route element={<ProtectedRoute allowedRoles={["CompanyAdmin", "User"]} />}>
                         <Route path="/portal/:slug" element={<CompanyPortal />} />
+                        <Route path="/portal/:slug/profile" element={<MyProfile />} /> {/* Nová routa */}
                     </Route>
 
-                    {/* Company Admin Only Routes */}
+                    {/* Správa oddělení (Jen CompanyAdmin) */}
                     <Route element={<ProtectedRoute allowedRoles={["CompanyAdmin"]} />}>
                         <Route path="/portal/:slug/departments" element={<Departments />} />
                     </Route>
 
-                    {/* Catch all */}
+                    {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
             </Router>

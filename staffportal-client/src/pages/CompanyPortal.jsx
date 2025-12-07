@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext"; // Ujisti se, že importuješ kontext správně
+import { useAuth } from "../context/AuthContext";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 import {
     Pencil,
     Trash2,
@@ -10,30 +11,34 @@ import {
     Save,
     X,
     LogOut,
-    User
+    User,
+    KeyRound // Ikona klíče pro heslo
 } from "lucide-react";
 
 export default function CompanyPortal() {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const { user, logout } = useAuth(); // Použití AuthContextu pro data uživatele a logout
+    const { user, logout } = useAuth();
 
+    // Data
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Editace
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         firstName: "", lastName: "", position: "", salary: "", email: "", password: "", departmentId: ""
     });
 
+    // Modal
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+
     const token = localStorage.getItem("token");
-    // Pokud používáš AuthContext, 'role' by měla být v objektu 'user'.
-    // Pro zpětnou kompatibilitu s tvým předchozím kódem necháme i localStorage fallback.
     const role = user?.role || localStorage.getItem("role");
 
-    // Načtení dat
+    // Načítání dat
     const loadData = useCallback(async () => {
         try {
             const headers = { "Authorization": `Bearer ${token}` };
@@ -64,16 +69,17 @@ export default function CompanyPortal() {
         loadData();
     }, [slug, token, navigate, loadData]);
 
-    // Handlery
+    // --- Handlery ---
+
     const handleEditClick = (emp) => {
         setEditingId(emp.id);
         setFormData({
             firstName: emp.firstName,
             lastName: emp.lastName,
             position: emp.position,
-            salary: emp.salary,
+            salary: emp.salary, // Backend pošle 0 pokud nejsem admin, ale formulář to snese
             email: emp.email,
-            password: "", // Heslo při editaci nevyplňujeme, pokud se nemění
+            password: "",
             departmentId: emp.departmentId || ""
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -102,8 +108,7 @@ export default function CompanyPortal() {
             });
 
             if (res.ok) {
-                // Místo alertu můžeš použít toast notifikaci, ale alert stačí pro teď
-                // alert(editingId ? "Uloženo!" : "Vytvořeno!");
+                // Ideálně použít toast.success("Uloženo!")
                 handleCancelEdit();
                 loadData();
             } else {
@@ -133,8 +138,9 @@ export default function CompanyPortal() {
 
     return (
         <div style={{ fontFamily: "'Inter', 'Poppins', sans-serif", background: "#f8fafc", minHeight: "100vh", paddingBottom: "40px" }}>
+
             {/* Navbar */}
-            <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "15px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+            <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "15px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 50 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ background: "#1f4e79", color: "white", padding: "8px", borderRadius: "6px" }}>
                         <Briefcase size={20} />
@@ -142,25 +148,44 @@ export default function CompanyPortal() {
                     <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.25rem" }}>{slug} <span style={{ fontWeight: "normal", color: "#64748b" }}>Portal</span></h2>
                 </div>
 
-                <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                     {role === "CompanyAdmin" && (
-                        <Link to={`/portal/${slug}/departments`} style={{ color: "#1f4e79", textDecoration: "none", fontWeight: 500, fontSize: "0.9rem" }}>
+                        <Link to={`/portal/${slug}/departments`} style={{ color: "#1f4e79", textDecoration: "none", fontWeight: 500, fontSize: "0.9rem", marginRight: "15px" }}>
                             Správa oddělení
                         </Link>
                     )}
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", fontSize: "0.9rem" }}>
+
+                    {/* Odkaz na Můj Profil */}
+                    <Link
+                        to={`/portal/${slug}/profile`}
+                        title="Můj profil"
+                        style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", textDecoration: "none", fontSize: "0.9rem", marginRight: "5px", padding: "6px 10px", borderRadius: "6px", transition: "background 0.2s" }}
+                        onMouseOver={e => e.currentTarget.style.background = "#f1f5f9"}
+                        onMouseOut={e => e.currentTarget.style.background = "transparent"}
+                    >
                         <User size={16} />
                         <span>{role}</span>
-                    </div>
-                    <button onClick={logout} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#fee2e2", border: "1px solid #fecaca", color: "#dc2626", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, transition: "all 0.2s" }}>
-                        <LogOut size={14} /> Odhlásit
+                    </Link>
+
+                    {/* Změna hesla */}
+                    <button
+                        onClick={() => setShowPasswordModal(true)}
+                        style={iconBtnStyle}
+                        title="Změnit heslo"
+                    >
+                        <KeyRound size={16} />
+                    </button>
+
+                    {/* Odhlásit */}
+                    <button onClick={logout} style={{ ...iconBtnStyle, color: "#dc2626", background: "#fee2e2", border: "1px solid #fecaca" }}>
+                        <LogOut size={16} />
                     </button>
                 </div>
             </nav>
 
             <div style={{ maxWidth: "1200px", margin: "40px auto", padding: "0 20px" }}>
 
-                {/* Form Section */}
+                {/* Formulář pro Admina */}
                 {role === "CompanyAdmin" && (
                     <div style={{ background: "white", padding: "30px", borderRadius: "16px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", marginBottom: "40px", border: "1px solid #e2e8f0" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
@@ -204,7 +229,7 @@ export default function CompanyPortal() {
                     </div>
                 )}
 
-                {/* List Header */}
+                {/* Seznam a filtrace */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "25px", flexWrap: "wrap", gap: "20px" }}>
                     <div>
                         <h1 style={{ color: "#0f172a", fontSize: "1.8rem", margin: "0 0 5px 0", fontWeight: 700 }}>Zaměstnanci</h1>
@@ -215,7 +240,7 @@ export default function CompanyPortal() {
                         <Search size={18} style={{ position: "absolute", left: "15px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
                         <input
                             type="text"
-                            placeholder="Hledat jméno, pozici..."
+                            placeholder="Hledat..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             style={{ ...inputStyle, paddingLeft: "45px", width: "100%", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}
@@ -223,7 +248,7 @@ export default function CompanyPortal() {
                     </div>
                 </div>
 
-                {/* Table */}
+                {/* Tabulka */}
                 <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", border: "1px solid #e2e8f0", overflow: "hidden" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                         <thead>
@@ -254,25 +279,29 @@ export default function CompanyPortal() {
                                     </td>
                                     <td style={{...tdStyle, color: "#475569"}}>{emp.departmentName || "—"}</td>
                                     <td style={{...tdStyle, color: "#64748b"}}>{emp.email}</td>
-                                    {role === "CompanyAdmin" && <td style={{...tdStyle, fontFamily: "monospace", color: "#0f172a"}}>{Number(emp.salary).toLocaleString()} Kč</td>}
+
+                                    {/* Plat vidí jen Admin */}
+                                    {role === "CompanyAdmin" && (
+                                        <td style={{...tdStyle, fontFamily: "monospace", color: "#0f172a"}}>
+                                            {Number(emp.salary).toLocaleString()} Kč
+                                        </td>
+                                    )}
+
+                                    {/* Akce vidí jen Admin */}
                                     {role === "CompanyAdmin" && (
                                         <td style={{...tdStyle, textAlign: "right", paddingRight: "20px"}}>
                                             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                                                 <button
                                                     onClick={() => handleEditClick(emp)}
                                                     title="Upravit"
-                                                    style={iconBtnStyle}
-                                                    onMouseOver={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#0f172a"; }}
-                                                    onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748b"; }}
+                                                    style={actionBtnStyle}
                                                 >
                                                     <Pencil size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteEmployee(emp.id)}
                                                     title="Smazat"
-                                                    style={{...iconBtnStyle, color: "#ef4444"}}
-                                                    onMouseOver={(e) => { e.currentTarget.style.background = "#fef2f2"; e.currentTarget.style.color = "#dc2626"; }}
-                                                    onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#ef4444"; }}
+                                                    style={{...actionBtnStyle, color: "#ef4444"}}
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
@@ -286,6 +315,11 @@ export default function CompanyPortal() {
                     </table>
                 </div>
             </div>
+
+            {/* Modální okno změny hesla */}
+            {showPasswordModal && (
+                <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+            )}
         </div>
     );
 }
@@ -327,14 +361,24 @@ const tdStyle = {
 };
 
 const iconBtnStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "white",
+    border: "1px solid #cbd5e1",
+    cursor: "pointer",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    color: "#475569",
+    transition: "all 0.2s"
+};
+
+const actionBtnStyle = {
     background: "transparent",
     border: "none",
     cursor: "pointer",
     padding: "8px",
     borderRadius: "6px",
     color: "#64748b",
-    transition: "all 0.2s",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center"
+    transition: "background 0.2s"
 };

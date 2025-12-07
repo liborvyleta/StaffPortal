@@ -1,138 +1,98 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { Mail, Building, MessageSquare, Send, CheckCircle, ArrowLeft } from "lucide-react";
 
 export default function Contact() {
-    const [companyName, setCompanyName] = useState("");
-    const [email, setEmail] = useState("");
-    const [message, setMessage] = useState("");
+    const [formData, setFormData] = useState({ companyName: "", email: "", message: "" });
     const [success, setSuccess] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        const res = await fetch("http://localhost:5083/api/contact", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ companyName, email, message }),
-        });
-
-        if (res.ok) {
-            setSuccess(true);
-            setCompanyName("");
-            setEmail("");
-            setMessage("");
+        setLoading(true);
+        try {
+            const res = await fetch("http://localhost:5083/api/contact", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+            if (res.ok) setSuccess(true);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div
-            style={{
-                background: "linear-gradient(135deg, #e8f0ff, #ffffff)",
-                minHeight: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "Poppins, sans-serif",
-                padding: "20px",
-            }}
-        >
-            <div
-                style={{
-                    background: "white",
-                    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-                    borderRadius: "16px",
-                    padding: "50px",
-                    maxWidth: "500px",
-                    width: "100%",
-                    textAlign: "center",
-                }}
-            >
-                <h1 style={{ color: "#1f4e79", marginBottom: "10px" }}>
-                    Request Access to StaffPortal
-                </h1>
-                <p style={{ color: "#555", marginBottom: "30px" }}>
-                    Fill out the form below and our team will contact you to set up your
-                    company account.
-                </p>
+        <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'Inter', sans-serif", display: "flex", flexDirection: "column" }}>
+            <nav style={{ padding: "20px 40px" }}>
+                <Link to="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", color: "#64748b", fontWeight: 500 }}>
+                    <ArrowLeft size={20} /> Zpět na domů
+                </Link>
+            </nav>
 
-                <form
-                    onSubmit={handleSubmit}
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "15px",
-                        textAlign: "left",
-                    }}
-                >
-                    <label style={{ color: "#1f4e79", fontWeight: 500 }}>Company Name</label>
-                    <input
-                        type="text"
-                        placeholder="e.g. Vyleta Software s.r.o."
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        required
-                        style={{
-                            padding: "12px",
-                            borderRadius: "8px",
-                            border: "1px solid #ccd5e0",
-                            outlineColor: "#1f4e79",
-                        }}
-                    />
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", padding: "20px" }}>
+                <div style={{ background: "white", padding: "50px", borderRadius: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.05)", width: "100%", maxWidth: "500px" }}>
 
-                    <label style={{ color: "#1f4e79", fontWeight: 500 }}>Contact Email</label>
-                    <input
-                        type="email"
-                        placeholder="e.g. info@vyletasoftware.cz"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        style={{
-                            padding: "12px",
-                            borderRadius: "8px",
-                            border: "1px solid #ccd5e0",
-                            outlineColor: "#1f4e79",
-                        }}
-                    />
+                    {success ? (
+                        <div style={{ textAlign: "center", padding: "40px 0" }}>
+                            <CheckCircle size={64} color="#10b981" style={{ marginBottom: "20px" }} />
+                            <h2 style={{ color: "#0f172a", marginBottom: "10px" }}>Žádost odeslána!</h2>
+                            <p style={{ color: "#64748b", lineHeight: "1.6" }}>Děkujeme za váš zájem. Náš tým vás bude brzy kontaktovat na uvedený email s přístupovými údaji.</p>
+                            <Link to="/" style={{ display: "inline-block", marginTop: "30px", color: "#3b82f6", fontWeight: 600, textDecoration: "none" }}>Zpět na úvod</Link>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ textAlign: "center", marginBottom: "40px" }}>
+                                <h1 style={{ fontSize: "2rem", fontWeight: 700, color: "#1e293b", marginBottom: "10px" }}>Začněte se StaffPortal</h1>
+                                <p style={{ color: "#64748b" }}>Vyplňte formulář a založte si firemní účet.</p>
+                            </div>
 
-                    <label style={{ color: "#1f4e79", fontWeight: 500 }}>Message</label>
-                    <textarea
-                        placeholder="Tell us about your company..."
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        rows={4}
-                        style={{
-                            padding: "12px",
-                            borderRadius: "8px",
-                            border: "1px solid #ccd5e0",
-                            outlineColor: "#1f4e79",
-                        }}
-                    />
+                            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                <div>
+                                    <label style={labelStyle}>Název firmy</label>
+                                    <div style={inputWrapperStyle}>
+                                        <Building size={18} color="#94a3b8" />
+                                        <input type="text" placeholder="Moje Firma s.r.o." required
+                                               value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})}
+                                               style={inputStyle} />
+                                    </div>
+                                </div>
 
-                    <button
-                        type="submit"
-                        style={{
-                            marginTop: "10px",
-                            padding: "12px 20px",
-                            background: "#1f4e79",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            transition: "all 0.3s ease",
-                            fontWeight: 500,
-                        }}
-                        onMouseOver={(e) => (e.target.style.background = "#2f65a2")}
-                        onMouseOut={(e) => (e.target.style.background = "#1f4e79")}
-                    >
-                        Send Request
-                    </button>
+                                <div>
+                                    <label style={labelStyle}>Email administrátora</label>
+                                    <div style={inputWrapperStyle}>
+                                        <Mail size={18} color="#94a3b8" />
+                                        <input type="email" placeholder="admin@mojefirma.cz" required
+                                               value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                                               style={inputStyle} />
+                                    </div>
+                                </div>
 
-                    {success && (
-                        <p style={{ color: "green", textAlign: "center", marginTop: "15px" }}>
-                             Your request has been sent successfully!
-                        </p>
+                                <div>
+                                    <label style={labelStyle}>Zpráva (nepovinné)</label>
+                                    <div style={{...inputWrapperStyle, alignItems: "flex-start", paddingTop: "12px"}}>
+                                        <MessageSquare size={18} color="#94a3b8" style={{ marginTop: "3px" }} />
+                                        <textarea placeholder="Počet zaměstnanců, speciální požadavky..." rows="3"
+                                                  value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})}
+                                                  style={{...inputStyle, resize: "none"}} />
+                                    </div>
+                                </div>
+
+                                <button type="submit" disabled={loading} style={submitBtnStyle}>
+                                    {loading ? "Odesílám..." : <><Send size={18} /> Odeslat žádost</>}
+                                </button>
+                            </form>
+                        </>
                     )}
-                </form>
+                </div>
             </div>
         </div>
     );
 }
+
+const labelStyle = { display: "block", marginBottom: "8px", color: "#334155", fontWeight: 500, fontSize: "0.9rem" };
+const inputWrapperStyle = { display: "flex", alignItems: "center", gap: "12px", padding: "0 16px", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#fff", transition: "border-color 0.2s" };
+const inputStyle = { width: "100%", padding: "12px 0", border: "none", outline: "none", fontSize: "1rem", color: "#0f172a" };
+const submitBtnStyle = { marginTop: "10px", padding: "14px", background: "#1f4e79", color: "white", border: "none", borderRadius: "8px", fontWeight: 600, fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", transition: "background 0.2s" };
