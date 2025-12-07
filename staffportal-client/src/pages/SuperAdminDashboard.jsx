@@ -258,7 +258,7 @@ export default function SuperAdminDashboard() {
                                 style={inputStyle}
                             />
                             <input
-                                type="text" placeholder="Heslo" required
+                                type="password" placeholder="Heslo" required
                                 value={newUserForm.password} onChange={e => setNewUserForm({...newUserForm, password: e.target.value})}
                                 style={inputStyle}
                             />
