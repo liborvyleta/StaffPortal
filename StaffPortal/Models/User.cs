@@ -18,9 +18,7 @@ public class User
     [BsonElement("employeeId")]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? EmployeeId { get; set; }
-
-    // ZMĚNA: Přidán otazník 'string?' a odstraněno '= string.Empty'
-    // Tím říkáme, že CompanyId nemusí být vyplněno (může být null)
+    
     [BsonElement("companyId")]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? CompanyId { get; set; }

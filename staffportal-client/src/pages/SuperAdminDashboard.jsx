@@ -86,6 +86,20 @@ export default function SuperAdminDashboard() {
         loadUsersForCompany(expandedCompanyId); // Refresh seznamu
     };
 
+    // NOVÁ FUNKCE: Smazání celé firmy
+    const handleDeleteCompany = async (companyId, companyName) => {
+        if (!window.confirm(`POZOR: Opravdu smazat firmu "${companyName}"?\n\nSmažou se i všichni její uživatelé!`)) return;
+
+        try {
+            const res = await fetch(`http://localhost:5083/api/superadmin/companies/${companyId}`, { method: "DELETE" });
+            if (res.ok) {
+                if (expandedCompanyId === companyId) setExpandedCompanyId(null);
+                loadCompanies(); // Aktualizujeme seznam
+                alert("Firma byla smazána.");
+            }
+        } catch (e) { console.error(e); }
+    };
+
     const handleAddUser = async (e) => {
         e.preventDefault();
         try {
@@ -161,7 +175,22 @@ export default function SuperAdminDashboard() {
                                         <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#0f172a" }}>{comp.name}</h3>
                                         <span style={{ fontSize: "0.85rem", color: "#64748b" }}>{comp.email} • /portal/{comp.slug}</span>
                                     </div>
-                                    {expandedCompanyId === comp.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+
+                                    {/* UPRAVENÁ HLAVIČKA S TLAČÍTKEM SMAZAT */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteCompany(comp.id, comp.name);
+                                            }}
+                                            title="Smazat celou firmu"
+                                            style={{ border: "none", background: "transparent", color: "#ef4444", cursor: "pointer" }}
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+
+                                        {expandedCompanyId === comp.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </div>
 
                                 {/* Detail firmy - seznam uživatelů */}
@@ -238,7 +267,7 @@ export default function SuperAdminDashboard() {
                                 style={inputStyle}
                             >
                                 <option value="CompanyAdmin">Company Admin</option>
-                                <option value="Employee">Employee</option>
+                                <option value="User">User</option>
                             </select>
                             <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
                                 <button type="submit" style={{ ...btnStyle, background: "#3b82f6", color: "white", flex: 1 }}>Vytvořit</button>

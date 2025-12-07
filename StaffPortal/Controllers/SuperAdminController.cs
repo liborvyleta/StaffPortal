@@ -58,14 +58,13 @@ public class SuperAdminController : ControllerBase
         await _context.Companies.InsertOneAsync(company);
 
         // Vytvoření CompanyAdmina
-        // ZDE JE TA DŮLEŽITÁ FIXACE: EmployeeId = "superadmin001"
         var adminUser = new User
         {
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
             Role = "CompanyAdmin",
             CompanyId = company.Id,
-            EmployeeId = "superadmin001"
+            EmployeeId = "000000000000000000000001"
         };
         await _context.Users.InsertOneAsync(adminUser);
 
@@ -128,35 +127,54 @@ public class SuperAdminController : ControllerBase
     }
 
     // POST: /api/superadmin/users/create
-    // Přidá nového uživatele do existující firmy
     [HttpPost("users/create")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
         // 1. Ověření, zda email již neexistuje
         var existing = await _context.Users.Find(u => u.Email == dto.Email).FirstOrDefaultAsync();
-        if (existing != null)
+        if (existing != null) 
             return BadRequest(new { message = "Email již existuje." });
 
-        // 2. Nastavení EmployeeId
-        // Pokud je to Admin, dáme mu superadmin001, aby aplikace nepadala.
-        // Pokud je to Employee, necháme null (bude si muset vytvořit profil, nebo ho vytvoříte později)
-        string? employeeIdToSave = null;
+        string employeeIdToSave = null;
+
+        // 2. LOGIKA PRO PŘIŘAZENÍ EMPLOYEE ID
         if (dto.Role == "CompanyAdmin")
         {
-            employeeIdToSave = "superadmin001";
+            // A) Pokud je to Admin, použijeme FIXNÍ ID (musí mít 24 znaků pro MongoDB!)
+            // Ujistěte se, že v kolekci Employees máte dokument s tímto _id
+            employeeIdToSave = "000000000000000000000001";
+        }
+        else
+        {
+            // B) Pokud je to běžný User/Employee, musíme mu VYTVOŘIT PROFIL zaměstnance
+            var newEmployee = new Employee
+            {
+                // Pokud nemáte v DTO jméno, dáme tam placeholder, uživatel si to změní
+                FirstName = "Nový", 
+                LastName = "Uživatel",
+                Email = dto.Email,
+                CompanyId = dto.CompanyId,
+                Position = "Zaměstnanec",
+            };
+
+            await _context.Employees.InsertOneAsync(newEmployee);
+            
+            // Získáme ID nově vytvořeného profilu (MongoDB ho vygeneruje samo a má správný formát)
+            employeeIdToSave = newEmployee.Id;
         }
 
+        // 3. Vytvoření uživatele
         var newUser = new User
         {
             Email = dto.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-            Role = dto.Role,
+            Role = dto.Role, // Zde přijde "User" nebo "CompanyAdmin"
             CompanyId = dto.CompanyId,
-            EmployeeId = employeeIdToSave
+            EmployeeId = employeeIdToSave // Teď už bude vždy vyplněno
         };
 
         await _context.Users.InsertOneAsync(newUser);
-        return Ok(new { message = "Uživatel úspěšně vytvořen." });
+        return Ok(new { message = "Uživatel a jeho profil úspěšně vytvořen." });
     }
 
     // DELETE: /api/superadmin/users/{id}
