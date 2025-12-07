@@ -1,7 +1,9 @@
+namespace StaffPortal.DTOs; 
+
 public class CreateUserDto
 {
-    public string Email { get; set; }
-    public string Password { get; set; }
-    public string Role { get; set; } // "CompanyAdmin" nebo "Employee"
-    public string CompanyId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public string CompanyId { get; set; } = string.Empty;
 }

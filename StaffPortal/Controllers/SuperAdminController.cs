@@ -4,6 +4,7 @@ using StaffPortal.Data;
 using StaffPortal.Models;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
+using StaffPortal.DTOs;
 
 namespace StaffPortal.Controllers;
 
@@ -132,10 +133,10 @@ public class SuperAdminController : ControllerBase
     {
         // 1. Ověření, zda email již neexistuje
         var existing = await _context.Users.Find(u => u.Email == dto.Email).FirstOrDefaultAsync();
-        if (existing != null) 
+        if (existing != null)
             return BadRequest(new { message = "Email již existuje." });
 
-        string employeeIdToSave = null;
+        string? employeeIdToSave = null;
 
         // 2. LOGIKA PRO PŘIŘAZENÍ EMPLOYEE ID
         if (dto.Role == "CompanyAdmin")
@@ -150,15 +151,14 @@ public class SuperAdminController : ControllerBase
             var newEmployee = new Employee
             {
                 // Pokud nemáte v DTO jméno, dáme tam placeholder, uživatel si to změní
-                FirstName = "Nový", 
-                LastName = "Uživatel",
+                FirstName = "",
+                LastName = "",
                 Email = dto.Email,
                 CompanyId = dto.CompanyId,
-                Position = "Zaměstnanec",
             };
 
             await _context.Employees.InsertOneAsync(newEmployee);
-            
+
             // Získáme ID nově vytvořeného profilu (MongoDB ho vygeneruje samo a má správný formát)
             employeeIdToSave = newEmployee.Id;
         }
