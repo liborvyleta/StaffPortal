@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { Toaster } from 'react-hot-toast';
 
 import HomeLanding from "./pages/HomeLanding";
 import Contact from "./pages/Contact";
@@ -14,6 +15,7 @@ function App() {
     return (
         <AuthProvider>
             <Router>
+                <Toaster position="top-right" />
                 <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<HomeLanding />} />
