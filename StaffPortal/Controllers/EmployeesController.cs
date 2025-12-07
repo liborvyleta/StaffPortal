@@ -21,25 +21,22 @@ public class EmployeesController : ControllerBase
         _context = context;
     }
 
-    // GET all
+    // GET all (s názvem oddělení)
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var companyId = User.FindFirst("companyId")?.Value;
         if (string.IsNullOrEmpty(companyId)) return BadRequest(new { message = "Chybí identifikace firmy." });
 
-        // Propojíme zaměstnance s odděleními (Lookup), abychom mohli poslat název oddělení na frontend
+        // Agregace pro získání názvu oddělení (protože oddělení jsou v jiné kolekci)
+        // Používáme $lookup pro propojení Employees s Departments
         var result = await _context.Employees.Aggregate()
             .Match(e => e.CompanyId == companyId)
-            .Lookup<Employee, Department, EmployeeWithDepartment>(
-                _context.Departments,
-                e => e.DepartmentId,
-                d => d.Id,
-                ewd => ewd.Departments
-            )
+            .Lookup("Departments", "departmentId", "_id", "Departments") // Propojení přes departmentId
+            .As<EmployeeWithDepartment>() // Mapování do pomocné třídy (kterou už asi máte nebo si ji MongoDB Driver domyslí přes BsonExtraElements)
             .ToListAsync();
 
-        // Namapujeme výsledek pro frontend
+        // Mapování výsledku pro frontend do čistého JSONu
         var response = result.Select(e => new
         {
             e.Id,
@@ -49,6 +46,7 @@ public class EmployeesController : ControllerBase
             e.Salary,
             e.Email,
             e.DepartmentId,
+            // Pokud má zaměstnanec přiřazené oddělení, vezmeme jeho název, jinak pomlčka
             DepartmentName = e.Departments.FirstOrDefault()?.Name ?? "—"
         });
 
@@ -64,7 +62,7 @@ public class EmployeesController : ControllerBase
         return Ok(employee);
     }
 
-    // POST create
+    // POST create (včetně user účtu a oddělení)
     [HttpPost]
     public async Task<IActionResult> Add([FromBody] CreateEmployeeDto request)
     {
@@ -78,6 +76,7 @@ public class EmployeesController : ControllerBase
         var existingUser = await _context.Users.Find(u => u.Email == request.Email).FirstOrDefaultAsync();
         if (existingUser != null) return Conflict(new { message = "Uživatel s tímto emailem již existuje." });
 
+        // Vytvoření zaměstnance s DepartmentId
         var employee = new Employee
         {
             FirstName = request.FirstName,
@@ -86,10 +85,11 @@ public class EmployeesController : ControllerBase
             Salary = request.Salary,
             Email = request.Email,
             CompanyId = companyId,
-            DepartmentId = request.DepartmentId // ZMĚNA: Ukládáme vybrané oddělení
+            DepartmentId = request.DepartmentId // Zde se ukládá ID oddělení vybrané ve formuláři
         };
         await _context.Employees.InsertOneAsync(employee);
 
+        // Vytvoření uživatelského účtu pro přihlášení
         var user = new User
         {
             Email = request.Email,
@@ -100,7 +100,33 @@ public class EmployeesController : ControllerBase
         };
         await _context.Users.InsertOneAsync(user);
 
-        return Ok(new { message = "Zaměstnanec vytvořen.", employeeId = employee.Id });
+        return Ok(new { message = "Zaměstnanec a účet vytvořen.", employeeId = employee.Id });
+    }
+
+    // PUT update (včetně změny oddělení)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(string id, [FromBody] UpdateEmployeeDto request)
+    {
+        var companyId = User.FindFirst("companyId")?.Value;
+        if (string.IsNullOrEmpty(companyId)) return BadRequest(new { message = "Chybí identifikace firmy." });
+
+        var existingEmployee = await _context.Employees
+            .Find(e => e.Id == id && e.CompanyId == companyId)
+            .FirstOrDefaultAsync();
+
+        if (existingEmployee == null)
+            return NotFound(new { message = "Zaměstnanec nenalezen." });
+
+        // Aktualizace polí
+        existingEmployee.FirstName = request.FirstName;
+        existingEmployee.LastName = request.LastName;
+        existingEmployee.Position = request.Position;
+        existingEmployee.Salary = request.Salary;
+        existingEmployee.Email = request.Email;
+        existingEmployee.DepartmentId = request.DepartmentId; // Aktualizace oddělení
+        
+        await _context.Employees.ReplaceOneAsync(e => e.Id == id, existingEmployee);
+        return Ok(existingEmployee);
     }
 
     // DELETE
@@ -109,6 +135,10 @@ public class EmployeesController : ControllerBase
     {
         var result = await _context.Employees.DeleteOneAsync(e => e.Id == id);
         if (result.DeletedCount == 0) return NotFound();
+        
+        // Smažeme i uživatelský účet, aby po smazání zaměstnance nezůstal "viset" login
+        await _context.Users.DeleteOneAsync(u => u.EmployeeId == id);
+
         return NoContent();
     }
 
@@ -129,15 +159,11 @@ public class EmployeesController : ControllerBase
             )
         );
 
-        // I při vyhledávání chceme vidět oddělení, takže použijeme také Aggregate/Lookup
+        // I při hledání chceme vidět název oddělení
         var employees = await _context.Employees.Aggregate()
             .Match(filter)
-            .Lookup<Employee, Department, EmployeeWithDepartment>(
-                _context.Departments,
-                e => e.DepartmentId,
-                d => d.Id,
-                ewd => ewd.Departments
-            )
+            .Lookup("Departments", "departmentId", "_id", "Departments")
+            .As<EmployeeWithDepartment>()
             .ToListAsync();
 
         var response = employees.Select(e => new
@@ -153,32 +179,5 @@ public class EmployeesController : ControllerBase
         });
 
         return Ok(response);
-    }
-    
-    // PUT update existing employee
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, [FromBody] UpdateEmployeeDto request)
-    {
-        var companyId = User.FindFirst("companyId")?.Value;
-        if (string.IsNullOrEmpty(companyId))
-            return BadRequest(new { message = "Chybí identifikace firmy." });
-
-        var existingEmployee = await _context.Employees
-            .Find(e => e.Id == id && e.CompanyId == companyId)
-            .FirstOrDefaultAsync();
-
-        if (existingEmployee == null)
-            return NotFound(new { message = $"Zaměstnanec nebyl nalezen nebo k němu nemáte práva." });
-
-        // Aktualizace polí
-        existingEmployee.FirstName = request.FirstName;
-        existingEmployee.LastName = request.LastName;
-        existingEmployee.Position = request.Position;
-        existingEmployee.Salary = request.Salary;
-        existingEmployee.Email = request.Email;
-        existingEmployee.DepartmentId = request.DepartmentId; // ZMĚNA: Aktualizace oddělení
-        
-        await _context.Employees.ReplaceOneAsync(e => e.Id == id, existingEmployee);
-        return Ok(existingEmployee);
     }
 }

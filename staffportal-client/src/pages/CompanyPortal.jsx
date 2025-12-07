@@ -166,9 +166,9 @@ export default function CompanyPortal() {
                     </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                    <h1 style={{ color: "#333", fontSize: "28px", margin: 0 }}>Seznam zaměstnanců</h1>
-                    <input type="text" placeholder="🔍 Hledat..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ padding: "10px 15px", borderRadius: "20px", border: "1px solid #ccc", width: "250px", outline: "none" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+                    <h1>Seznam zaměstnanců</h1>
+                    <input type="text" placeholder="Hledat..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ padding: "10px", borderRadius: "20px", border: "1px solid #ccc" }} />
                 </div>
 
                 <div style={{ background: "white", borderRadius: "10px", overflow: "hidden" }}>
@@ -201,7 +201,7 @@ export default function CompanyPortal() {
                                             style={{
                                                 marginRight: "8px",
                                                 cursor: "pointer",
-                                                background: "#ff9800", // Oranžová pro úpravu
+                                                background: "#ff9800",
                                                 color: "white",
                                                 border: "none",
                                                 fontSize: "14px",
@@ -219,7 +219,7 @@ export default function CompanyPortal() {
                                             onClick={() => handleDeleteEmployee(emp.id)}
                                             title="Smazat"
                                             style={{
-                                                background: "#d32f2f", // Červená pro smazání
+                                                background: "#d32f2f",
                                                 color: "white",
                                                 cursor: "pointer",
                                                 border: "none",
