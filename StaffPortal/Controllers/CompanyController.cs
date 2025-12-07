@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using StaffPortal.Data;
@@ -16,20 +17,25 @@ public class CompaniesController : ControllerBase
         _context = context;
     }
 
-    [HttpPost("register")]
-    public async Task<IActionResult> RegisterCompany([FromBody] Company company)
-    {
-        company.CreatedAt = DateTime.UtcNow;
-        await _context.Companies.InsertOneAsync(company);
-        return Ok(company);
-    }
+    // Odstraněna veřejná metoda RegisterCompany. 
+    // Firmy vznikají POUZE schválením přes SuperAdminController.
 
     [HttpGet("{id}")]
+    [Authorize] // Nyní chráněno
     public async Task<IActionResult> GetCompany(string id)
     {
         var company = await _context.Companies.Find(c => c.Id == id).FirstOrDefaultAsync();
         if (company == null)
             return NotFound();
         return Ok(company);
+    }
+    
+    // Endpoint pro získání firmy podle Slugu (pro frontend check)
+    [HttpGet("by-slug/{slug}")]
+    public async Task<IActionResult> GetBySlug(string slug)
+    {
+        var company = await _context.Companies.Find(c => c.Slug == slug).FirstOrDefaultAsync();
+        if (company == null) return NotFound();
+        return Ok(new { company.Name, company.Domain });
     }
 }
